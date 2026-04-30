@@ -69,8 +69,11 @@ public class GameScene {
     private int     score      = 0;     // frames survived
     private long    startTime  = 0;
     private int     playerCount;
+    private final Stage stage;
+    private int levelMessageTimer = 120;
 
     public GameScene(Stage stage, int playerCount) {
+        this.stage = stage;
         this.playerCount = playerCount;
 
         canvas = new Canvas(WIDTH, HEIGHT);
@@ -86,9 +89,19 @@ public class GameScene {
         waveManager   = new WaveManager(WIDTH, HEIGHT);
         inputHandler  = new InputHandler(scene, players);
 
+        startTime = System.currentTimeMillis();
+        gameLoop  = new GameLoop(this::update, this::render);
+        gameLoop.start();
         // Mouse shooting for Player 1
         // Mouse shooting for Player 1
         scene.setOnMousePressed(e -> {
+            if (gameOver) {
+                gameLoop.stop();
+                MenuScene menu = new MenuScene(stage);
+                stage.setScene(menu.getScene());
+                return;
+            }
+
             if (!players.isEmpty() && players.get(0).isAlive()) {
                 Player p1 = players.get(0);
                 double angle = Math.atan2(
@@ -98,10 +111,6 @@ public class GameScene {
                 fireBullet(p1, angle);
             }
         });
-
-        startTime = System.currentTimeMillis();
-        gameLoop  = new GameLoop(this::update, this::render);
-        gameLoop.start();
 
         stage.setOnCloseRequest(e -> gameLoop.stop());
     }
@@ -133,7 +142,12 @@ public class GameScene {
         }
 
         // Spawn new Gaods from wave manager
+        int oldLevel = waveManager.getCurrentLevel();
         gaods.addAll(waveManager.update(gaods));
+
+        if(waveManager.getCurrentLevel() > oldLevel){
+            levelMessageTimer = 120; //showw level message
+        }
 
         // Update Gaods
         for (Gaod g : gaods) {
@@ -170,6 +184,10 @@ public class GameScene {
             gameOver = true;
             gameLoop.stop();
         }
+
+        if(levelMessageTimer > 0){
+            levelMessageTimer--;
+        }
     }
 
     private void fireBullet(Player p, double angle) {
@@ -197,6 +215,7 @@ public class GameScene {
         drawGaods();
         drawPlayers();
         drawHUD();
+        drawLevelMessage();
 
         if (gameOver) drawGameOver();
     }
@@ -310,6 +329,17 @@ public class GameScene {
         gc.fillText("P1: WASD+Mouse  P2: Arrows+L  P3: IJKL+U  P4: Numpad", 10, HEIGHT - 7);
     }
 
+    private void drawLevelMessage() {
+        if (levelMessageTimer <= 0 || gameOver) return;
+
+        gc.setFill(Color.web("#00000099"));
+        gc.fillRoundRect(WIDTH / 2.0 - 160, HEIGHT / 2.0 - 60, 320, 100, 20, 20);
+
+        gc.setFill(Color.web("#ffcc00"));
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 42));
+        gc.fillText("LEVEL " + waveManager.getCurrentLevel(), WIDTH / 2.0 - 100, HEIGHT / 2.0);
+    }
+
     private void drawGameOver() {
         gc.setFill(Color.web("#000000bb"));
         gc.fillRect(0, 0, WIDTH, HEIGHT);
@@ -324,6 +354,10 @@ public class GameScene {
         gc.fillText("Survived: " + elapsed + "s   |   Level: " +
             waveManager.getCurrentLevel() + "   |   Score: " + score,
             WIDTH / 2.0 - 230, HEIGHT / 2.0 + 20);
+
+        gc.setFill(Color.web("#ffcc00"));
+        gc.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        gc.fillText("Click anywhere to return to menu", WIDTH / 2.0 - 140, HEIGHT / 2.0 + 60);
     }
 
     public Scene getScene() { return scene; }

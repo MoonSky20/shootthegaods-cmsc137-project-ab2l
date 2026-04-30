@@ -63,6 +63,12 @@ public class WaveManager {
             gaodsSpawnedThisWave++;
         }
 
+        // if all gaods for this wave ay defeated na
+        if (gaodsSpawnedThisWave >= totalToSpawn && currentGaods.isEmpty()){
+            advanceLevel();
+            return newGaods;
+        }
+
         // Advance wave when timer expires
         if (waveTimer >= getWaveDuration()) {
             advanceLevel();
