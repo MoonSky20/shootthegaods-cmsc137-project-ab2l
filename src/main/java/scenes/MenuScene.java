@@ -8,9 +8,12 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.scene.text.Text;
+
 
 /**
  * MenuScene — the main menu.
@@ -24,72 +27,99 @@ public class MenuScene {
         Canvas canvas = new Canvas(GameScene.WIDTH, GameScene.HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
 
-        // Draw background
-        gc.setFill(Color.web("#1a1a2e"));
-        gc.fillRect(0, 0, GameScene.WIDTH, GameScene.HEIGHT);
+        // Load fonts
+        Font mainFont = Font.loadFont(
+                getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"),
+                52);
 
-        // Grid
-        gc.setStroke(Color.web("#16213e"));
-        gc.setLineWidth(1);
-        for (int x = 0; x < GameScene.WIDTH;  x += 40) gc.strokeLine(x, 0, x, GameScene.HEIGHT);
-        for (int y = 0; y < GameScene.HEIGHT; y += 40) gc.strokeLine(0, y, GameScene.WIDTH, y);
+        Font subFont = Font.loadFont(
+                getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"),
+                13);
+
+        // Dropshadow
+        DropShadow btnShadow = new DropShadow();
+        btnShadow.setColor(Color.web("#5a1a00"));
+        btnShadow.setRadius(0);
+        btnShadow.setOffsetX(4);
+        btnShadow.setOffsetY(4);
 
         // Title
-        gc.setFill(Color.web("#e94560"));
-        gc.setFont(Font.font("Arial", FontWeight.BOLD, 52));
-        gc.fillText("SHOOT THE GAODS!", 160, 160);
+        Text title = new Text("SHOOT THE GAODS!");
+        title.setFont(mainFont);
+        title.setFill(Color.web("#FFE066"));
 
-        gc.setFill(Color.web("#ffffff88"));
-        gc.setFont(Font.font("Arial", 18));
-        gc.fillText("Inspired by Box Head  •  Co-op Survival Shooter", 230, 200);
+        // Pixel-style hard shadow (no blur, offset only)
+        DropShadow titleShadow = new DropShadow();
+        titleShadow.setColor(Color.web("#5a1a00"));
+        titleShadow.setRadius(0);
+        titleShadow.setSpread(0);
+        titleShadow.setOffsetX(3);
+        titleShadow.setOffsetY(3);
+        title.setEffect(titleShadow);
 
+        // Subtitle
+       Text subtitle = new Text("[ Inspired by Box Head  •  Co-op Survival Shooter ]");
+       subtitle.setFont(subFont);
+       subtitle.setFill(Color.web("#FFE066"));
+       subtitle.setEffect(titleShadow);
         // Buttons
         VBox buttons = new VBox(14);
         buttons.setAlignment(Pos.CENTER);
         buttons.setTranslateY(60);
 
-        String[] labels = { "1 Player", "2 Players", "3 Players", "4 Players" };
-        for (int i = 0; i < 4; i++) {
+        String[] labels = { "1 Player", "2 Players", "3 Players"};
+        String baseStyle =
+                "-fx-background-color: #3b1a08;" +   // dark wood brown
+                        "-fx-text-fill: #FFE066;" +           // warm yellow text
+                        "-fx-font-size: 14px;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-border-color: #c8600a;" +        // burnt orange border
+                        "-fx-border-width: 3;" +
+                        "-fx-background-radius: 0;" +         // sharp pixel corners
+                        "-fx-border-radius: 0;" +
+                        "-fx-cursor: hand;" +
+                        "-fx-padding: 9 0 9 0;";
+        String hoverStyle =
+                "-fx-background-color: #c8600a;" +   // orange fill on hover
+                    "-fx-text-fill: #FFE066;" +
+                    "-fx-font-size: 14px;" +
+                    "-fx-font-weight: bold;" +
+                    "-fx-border-color: #FFE066;" +        // yellow border on hover
+                    "-fx-border-width: 3;" +
+                    "-fx-background-radius: 0;" +
+                    "-fx-border-radius: 0;" +
+                    "-fx-cursor: hand;" +
+                    "-fx-padding: 9 0 9 0;";
+
+        for (int i = 0; i < 3; i++) {
             final int count = i + 1;
             Button btn = new Button(labels[i]);
             btn.setPrefWidth(200);
             btn.setPrefHeight(44);
-            btn.setStyle(
-                "-fx-background-color: #0f3460;" +
-                "-fx-text-fill: white;" +
-                "-fx-font-size: 16px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-border-color: #e94560;" +
-                "-fx-border-width: 2;" +
-                "-fx-cursor: hand;"
-            );
-            btn.setOnMouseEntered(e -> btn.setStyle(
-                "-fx-background-color: #e94560;" +
-                "-fx-text-fill: white;" +
-                "-fx-font-size: 16px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-border-color: #e94560;" +
-                "-fx-border-width: 2;" +
-                "-fx-cursor: hand;"
-            ));
-            btn.setOnMouseExited(e -> btn.setStyle(
-                "-fx-background-color: #0f3460;" +
-                "-fx-text-fill: white;" +
-                "-fx-font-size: 16px;" +
-                "-fx-font-weight: bold;" +
-                "-fx-border-color: #e94560;" +
-                "-fx-border-width: 2;" +
-                "-fx-cursor: hand;"
-            ));
-            btn.setOnAction(e -> {
+            btn.setStyle( baseStyle);
+            btn.setEffect(btnShadow);
+
+            btn.setOnMouseEntered(e -> btn.setStyle( hoverStyle));
+            btn.setOnMouseExited(e -> btn.setStyle(baseStyle));
+            btn.setOnAction(e -> { // Launch game
                 GameScene game = new GameScene(stage, count);
                 stage.setScene(game.getScene());
             });
             buttons.getChildren().add(btn);
         }
 
-        StackPane root = new StackPane(canvas, buttons);
+        // Stack title, sub and button
+        VBox content = new VBox(10, title, subtitle, buttons);
+        content.setAlignment(Pos.CENTER);
+        VBox.setMargin(buttons, new javafx.geometry.Insets(20, 0, 0, 0));
+
+        StackPane root = new StackPane(canvas, content);
+        StackPane.setAlignment(content,Pos.CENTER);
         scene = new Scene(root, GameScene.WIDTH, GameScene.HEIGHT);
+
+        // add css
+        root.getStyleClass().add("root");
+        scene.getStylesheets().add(getClass().getResource("/css/main.css").toExternalForm());
     }
 
     public Scene getScene() { return scene; }
