@@ -12,10 +12,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.scene.image.Image;
 import model.Bullet;
 import model.Gaod;
 import model.Player;
+import model.Obstacle;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -58,6 +61,7 @@ public class GameScene {
     private final List<Player> players = new ArrayList<>();
     private final List<Gaod>   gaods   = new ArrayList<>();
     private final List<Bullet> bullets = new ArrayList<>();
+    private final List<Obstacle> obstacles = new ArrayList<>();
 
     // --- Systems ---
     private final GameLoop    gameLoop;
@@ -72,13 +76,27 @@ public class GameScene {
     private final Stage stage;
     private int levelMessageTimer = 120;
 
+
+
+
     public GameScene(Stage stage, int playerCount) {
         this.stage = stage;
         this.playerCount = playerCount;
 
+        //--- Game assets ---
+        Image floorTile = new Image( getClass().getResourceAsStream("/assets/tile.png"));
+        List <Image> playerAvatar = new ArrayList<>(); // add player avatars here
+
+
+
+
         canvas = new Canvas(WIDTH, HEIGHT);
         gc     = canvas.getGraphicsContext2D();
         scene  = new Scene(new StackPane(canvas), WIDTH, HEIGHT);
+
+        // Render tile
+        gc.clearRect(0, 0, GameScene.WIDTH, GameScene.HEIGHT);
+        drawFloor(gc, floorTile, GameScene.WIDTH, GameScene.HEIGHT);
 
         // Create players
         for (int i = 0; i < playerCount; i++) {
@@ -90,7 +108,7 @@ public class GameScene {
         inputHandler  = new InputHandler(scene, players);
 
         startTime = System.currentTimeMillis();
-        gameLoop  = new GameLoop(this::update, this::render);
+        gameLoop = new GameLoop(this::update, () -> render(floorTile));
         gameLoop.start();
         // Mouse shooting for Player 1
         // Mouse shooting for Player 1
@@ -126,7 +144,7 @@ public class GameScene {
 
         // Update players
         for (Player p : players) {
-            p.update(WIDTH, HEIGHT);
+            p.update(WIDTH, HEIGHT, obstacles);
 
             // Respawn if timer expired and at least one ally is alive
             if (!p.isAlive() && p.getRespawnTimer() == 0 && anyPlayerAlive()) {
@@ -205,12 +223,13 @@ public class GameScene {
     // RENDER
     // -------------------------------------------------------
 
-    private void render() {
+    private void render(Image floorTile) {
         // Background
         gc.setFill(Color.web("#1a1a2e"));
         gc.fillRect(0, 0, WIDTH, HEIGHT);
 
-        drawGrid();
+        gc.clearRect(0, 0, GameScene.WIDTH, GameScene.HEIGHT);
+        drawFloor(gc, floorTile, GameScene.WIDTH, GameScene.HEIGHT);
         drawBullets();
         drawGaods();
         drawPlayers();
@@ -358,6 +377,15 @@ public class GameScene {
         gc.setFill(Color.web("#ffcc00"));
         gc.setFont(Font.font("Arial", FontWeight.BOLD, 18));
         gc.fillText("Click anywhere to return to menu", WIDTH / 2.0 - 140, HEIGHT / 2.0 + 60);
+    }
+
+    private void drawFloor(GraphicsContext gc, Image floorTile, int width, int height) {
+        gc.setImageSmoothing(false); // keep pixel art crisp
+        for (int y = 0; y < height; y += 32) {
+            for (int x = 0; x < width; x += 32) { // [TO ADD] change tile in the ends i.e x <= width
+                gc.drawImage(floorTile, x, y, 32, 32);
+            }
+        }
     }
 
     public Scene getScene() { return scene; }

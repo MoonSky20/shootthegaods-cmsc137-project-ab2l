@@ -1,5 +1,7 @@
 package model;
 
+import java.util.List;
+
 /**
  * Player — represents one of the 1-4 co-op players.
  * Handles movement, health, respawn timer, and shooting state.
@@ -49,7 +51,7 @@ public class Player {
      * Updates position, aim angle, and shoot cooldown.
      * Called every frame by the game loop.
      */
-    public void update(int mapWidth, int mapHeight) {
+    public void update(int mapWidth, int mapHeight, List<Obstacle> Obstacles) {
         if (!alive) {
             // Count down respawn timer
             if (respawnTimer > 0) respawnTimer--;
@@ -58,7 +60,7 @@ public class Player {
 
         // Movement
         double dx = 0, dy = 0;
-        if (movingUp)    dy -= SPEED;
+        if (movingUp)    dy -= SPEED; // Add constraints here
         if (movingDown)  dy += SPEED;
         if (movingLeft)  dx -= SPEED;
         if (movingRight) dx += SPEED;
@@ -68,6 +70,8 @@ public class Player {
             dx *= 0.707;
             dy *= 0.707;
         }
+
+        // Resolve x axis
 
         x += dx;
         y += dy;
