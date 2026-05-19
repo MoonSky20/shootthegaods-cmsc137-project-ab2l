@@ -10,3 +10,34 @@
     -fx-background-repeat: no-repeat;
     -fx-background-size: cover;
 }
+
+/* for title/subtitle boxes */
+.retro-box {
+    -fx-alignment: center;
+    -fx-background-color: rgba(25, 15, 10, 0.85);
+    -fx-border-color: #e59848;
+    -fx-border-width: 2px;
+    -fx-padding: 16px 16px;
+    -fx-effect: dropshadow(one-pass-box, rgba(0, 0, 0, 0.6), 0, 0, 3, 3);
+}
+
+/*container for main menu */
+.main-content-box {
+    -fx-background-color: rgba(35, 20, 15, 0.9);
+    -fx-border-color: #FCD34D;
+    -fx-border-width: 2px;
+    -fx-padding: 30px 20px 20px 20px;
+}
+
+
+.overlay-title {
+    -fx-background-color: #FCD34D;
+    -fx-text-fill: #1a0f0a;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 10px;
+    -fx-alignment: center;
+}
+
+
+

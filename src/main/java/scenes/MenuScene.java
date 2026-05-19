@@ -17,11 +17,6 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 /**
- * MenuScene — main menu.
- *
- * ── Local Play (same PC) ──   [1 Player]  [2 Players]  [3 Players]
- * ── Network Play (LAN) ──     [Host 2P]  [Host 3P]  [Host 4P]
- *                              [IP field]  [Join Game]
  *
  * Local buttons go straight to GameScene.
  * Host buttons open LobbyScene (host mode).
@@ -37,11 +32,11 @@ public class MenuScene {
 
         // ---- Fonts ----
         Font mainFont = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"), 48);
-        Font subFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"), 13);
-        Font secFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"), 15);
+        Font subFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
+        Font secFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
         if (mainFont == null) mainFont = Font.font("Arial", 48);
         if (subFont  == null) subFont  = Font.font("Arial", 13);
-        if (secFont  == null) secFont  = Font.font("Arial", 15);
+        if (secFont  == null) secFont  = Font.font("Arial", 13);
 
         DropShadow titleShadow = pixelShadow("#5a1a00", 3, 3);
         DropShadow btnShadow   = pixelShadow("#5a1a00", 4, 4);
@@ -52,49 +47,84 @@ public class MenuScene {
         title.setFill(Color.web("#FFE066"));
         title.setEffect(titleShadow);
 
+        VBox titleContainer = new VBox(title);
+        titleContainer.setAlignment(Pos.CENTER);
+        titleContainer.getStyleClass().add("retro-box");
+        titleContainer.setMaxWidth(520);
+
+        // ---- Subtitle ----
         Text subtitle = new Text("[ Inspired by Box Head  •  Co-op Survival Shooter ]");
         subtitle.setFont(subFont);
-        subtitle.setFill(Color.web("#FFE066"));
-        subtitle.setEffect(titleShadow);
+        subtitle.setFill(Color.web("#FCD34D"));
 
-        // ---- Section labels ----
-        Text localLabel = section("─── Local Play (same PC) ───", secFont);
-        Text netLabel   = section("─── Network Play (LAN / Wi-Fi) ───", secFont);
+        VBox subtitleContainer = new VBox(subtitle);
+        subtitleContainer.setAlignment(Pos.CENTER);
+        subtitleContainer.getStyleClass().add("retro-box");
+        subtitleContainer.setStyle("-fx-padding: 6px 12px;");
+        subtitleContainer.setMaxWidth(520);
 
-        // ---- Local play ----
-        HBox localRow = new HBox(12);
-        localRow.setAlignment(Pos.CENTER);
-        String[] localLabels = { "1 Player", "2 Players", "3 Players" };
+        // ---- Local Play panel ----
+        Text localLabel = section("LOCAL PLAY", secFont);
+        VBox localLCont = new VBox(localLabel);
+        localLCont.getStyleClass().add("overlay-title");
+        localLCont.setMaxWidth(VBox.USE_PREF_SIZE);
+        localLCont.setMaxHeight(VBox.USE_PREF_SIZE);
+
+        VBox localContent = new VBox(10);
+        localContent.setAlignment(Pos.CENTER);
+        // Extra top padding so buttons don't hide under the overlay label
+        localContent.setPadding(new Insets(24, 16, 16, 16));
+        localContent.getStyleClass().add("main-content-box");
+
+        String[] localLabels = { "1 PLAYER", "2 PLAYER", "3 PLAYER" };
         for (int i = 0; i < 3; i++) {
             final int count = i + 1;
-            Button btn = makeBtn(localLabels[i], 130, btnShadow);
+            Button btn = makeBtn(localLabels[i]);
+            btn.setFont(secFont);
+            btn.setPrefWidth(160);
             btn.setOnAction(e -> stage.setScene(new GameScene(stage, count).getScene()));
-            localRow.getChildren().add(btn);
+            localContent.getChildren().add(btn);
         }
 
-        // ---- Host buttons ----
-        HBox hostRow = new HBox(12);
+        // StackPane: content box behind, label overlaid on top-left
+        StackPane localPanel = new StackPane(localContent, localLCont);
+        localPanel.setMaxWidth(220);
+        StackPane.setAlignment(localLCont, Pos.TOP_LEFT);
+        localLCont.setTranslateX(12);
+        localLCont.setTranslateY(-14);   // half the label height — sits on the border
+
+        // ---- Network Play panel ----
+        Text netLabel = section("NETWORK PLAY", secFont);
+        VBox netLCont = new VBox(netLabel);
+        netLCont.getStyleClass().add("overlay-title");
+        netLCont.setMaxWidth(VBox.USE_PREF_SIZE);
+        netLCont.setMaxHeight(VBox.USE_PREF_SIZE);
+
+        HBox hostRow = new HBox(10);
         hostRow.setAlignment(Pos.CENTER);
         String[] hostLabels = { "Host 2P", "Host 3P", "Host 4P" };
         for (int i = 0; i < 3; i++) {
             final int count = i + 2;
-            Button btn = makeBtn(hostLabels[i], 130, btnShadow);
+            Button btn = makeBtn(hostLabels[i]);
+            btn.setFont(secFont);
+            btn.setPrefWidth(100);
             btn.setOnAction(e -> stage.setScene(new LobbyScene(stage, count).getScene()));
             hostRow.getChildren().add(btn);
         }
 
         // ---- Join row ----
         TextField ipField = new TextField();
-        ipField.setPromptText("Host IP (e.g. 192.168.1.42)");
-        ipField.setPrefWidth(240);
+        ipField.setPromptText("Host IP  (e.g. 192.168.1.42)");
+        ipField.setPrefWidth(220);
         ipField.setStyle(
-            "-fx-background-color:#3b1a08;-fx-text-fill:#FFE066;" +
-            "-fx-prompt-text-fill:#aa8844;-fx-font-size:13px;" +
-            "-fx-border-color:#c8600a;-fx-border-width:2;" +
-            "-fx-background-radius:0;-fx-border-radius:0;"
+                "-fx-background-color:#3b1a08;-fx-text-fill:#FFE066;" +
+                        "-fx-prompt-text-fill:#aa8844;-fx-font-size:12px;" +
+                        "-fx-border-color:#c8600a;-fx-border-width:2;" +
+                        "-fx-background-radius:0;-fx-border-radius:0;"
         );
 
-        Button joinBtn = makeBtn("Join Game", 130, btnShadow);
+        // Error handling on join button
+        Button joinBtn = makeBtn("Join");
         joinBtn.setOnAction(e -> {
             String ip = ipField.getText().trim();
             if (ip.isEmpty()) {
@@ -104,18 +134,36 @@ public class MenuScene {
             stage.setScene(new LobbyScene(stage, ip).getScene());
         });
 
-        HBox joinRow = new HBox(12, ipField, joinBtn);
+        HBox joinRow = new HBox(10, ipField, joinBtn);
         joinRow.setAlignment(Pos.CENTER);
 
-        // ---- Layout ----
+        VBox netContent = new VBox(10, hostRow, joinRow);
+        netContent.setAlignment(Pos.CENTER);
+        // Extra top padding so host buttons don't hide under overlay label
+        netContent.setPadding(new Insets(24, 16, 16, 16));
+        netContent.getStyleClass().add("main-content-box");
+
+
+        // StackPane: content box behind, label overlaid on top-left
+        StackPane netPanel = new StackPane(netContent, netLCont);
+        netPanel.setMaxWidth(380);
+        StackPane.setAlignment(netLCont, Pos.TOP_LEFT);
+        netLCont.setTranslateX(12);
+        netLCont.setTranslateY(-14);
+
+        // ---- Side-by-side panels ----
+        HBox panels = new HBox(32, localPanel, netPanel);
+        panels.setAlignment(Pos.CENTER);
+        panels.setPadding(new Insets(20, 0, 0, 0));
+
+        // ---- Root layout ----
         VBox content = new VBox(14,
-            title, subtitle,
-            new Text(""),
-            localLabel, localRow,
-            new Text(""),
-            netLabel, hostRow, joinRow
+                titleContainer,
+                subtitleContainer,
+                panels
         );
         content.setAlignment(Pos.CENTER);
+        content.setFillWidth(false);
 
         StackPane root = new StackPane(canvas, content);
         StackPane.setAlignment(content, Pos.CENTER);
@@ -123,7 +171,8 @@ public class MenuScene {
 
         root.getStyleClass().add("root");
         try {
-            scene.getStylesheets().add(getClass().getResource("/css/main.css").toExternalForm());
+            scene.getStylesheets().add(
+                    getClass().getResource("/css/main.css").toExternalForm());
         } catch (Exception ignored) {}
     }
 
@@ -135,18 +184,23 @@ public class MenuScene {
         return t;
     }
 
-    private Button makeBtn(String label, double width, DropShadow shadow) {
+    private Button makeBtn(String label) {
         Button btn = new Button(label);
-        btn.setPrefWidth(width);
-        btn.setPrefHeight(44);
-        String base  = "-fx-background-color:#3b1a08;-fx-text-fill:#FFE066;-fx-font-size:13px;" +
-                       "-fx-font-weight:bold;-fx-border-color:#c8600a;-fx-border-width:3;" +
-                       "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;-fx-padding:9 0 9 0;";
-        String hover = "-fx-background-color:#c8600a;-fx-text-fill:#FFE066;-fx-font-size:13px;" +
-                       "-fx-font-weight:bold;-fx-border-color:#FFE066;-fx-border-width:3;" +
-                       "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;-fx-padding:9 0 9 0;";
+
+        String base  = "-fx-background-color:#EAC33E;-fx-text-fill:#1a0f0a;" +
+                "-fx-font-weight:bold;-fx-font-size:16px;" +
+                "-fx-max-width:infinity;-fx-padding:12px;" +
+                "-fx-border-color:#1a0f0a;-fx-border-width:3px;" +
+                "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;";
+
+        // Hover: invert dark bg, yellow text, yellow border
+        String hover = "-fx-background-color:#1a0f0a;-fx-text-fill:#EAC33E;" +
+                "-fx-font-weight:bold;-fx-font-size:16px;" +
+                "-fx-max-width:infinity;-fx-padding:12px;" +
+                "-fx-border-color:#EAC33E;-fx-border-width:3px;" +
+                "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;";
+
         btn.setStyle(base);
-        btn.setEffect(shadow);
         btn.setOnMouseEntered(e -> btn.setStyle(hover));
         btn.setOnMouseExited(e  -> btn.setStyle(base));
         return btn;
