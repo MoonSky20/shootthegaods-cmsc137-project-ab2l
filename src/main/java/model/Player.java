@@ -137,6 +137,10 @@ public class Player {
     public String  getCurrentWeapon(){ return currentWeapon; }
     public void    setCurrentWeapon(String w) { this.currentWeapon = w; }
 
+    private int    characterIndex = 0;
+    public int     getCharacterIndex() { return characterIndex; }
+    public void    setCharacterIndex(int idx) { this.characterIndex = idx; }
+
     public void setMovingUp(boolean v)    { movingUp    = v; }
     public void setMovingDown(boolean v)  { movingDown  = v; }
     public void setMovingLeft(boolean v)  { movingLeft  = v; }

@@ -75,9 +75,24 @@ public class GameScene {
     private int     playerCount;
     private final Stage stage;
     private int levelMessageTimer = 120;
+<<<<<<< Updated upstream
 
 
 
+=======
+    private Image blueGaodImg;
+    private Image redGaodImg;
+    private Image bulletImg;
+    private Image plantsImg;
+    private Font hudFont;
+    private Font mainFont;
+    private Font msgFont;
+    private Font infoFont;
+    private Font nameFont;
+    private double mouseX = 0;
+    private double mouseY = 0;
+    private boolean mouseTracked = false;
+>>>>>>> Stashed changes
 
     public GameScene(Stage stage, int playerCount) {
         this.stage = stage;
@@ -110,8 +125,18 @@ public class GameScene {
         startTime = System.currentTimeMillis();
         gameLoop = new GameLoop(this::update, () -> render(floorTile));
         gameLoop.start();
-        // Mouse shooting for Player 1
-        // Mouse shooting for Player 1
+
+        // Mouse shooting and continuous aiming for Player 1
+        scene.setOnMouseMoved(e -> {
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+        });
+        scene.setOnMouseDragged(e -> {
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+        });
         scene.setOnMousePressed(e -> {
             if (gameOver) {
                 gameLoop.stop();
@@ -120,16 +145,25 @@ public class GameScene {
                 return;
             }
 
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+
             if (!players.isEmpty() && players.get(0).isAlive()) {
                 Player p1 = players.get(0);
                 double angle = Math.atan2(
+<<<<<<< Updated upstream
                         e.getY() - (p1.getY() + Player.SIZE / 2.0),
                         e.getX() - (p1.getX() + Player.SIZE / 2.0)
                 );
+=======
+                        mouseY - (p1.getY() + Player.SIZE / 2.0),
+                        mouseX - (p1.getX() + Player.SIZE / 2.0));
+>>>>>>> Stashed changes
                 fireBullet(p1, angle);
+                p1.triggerShootCooldown();
             }
         });
-
         stage.setOnCloseRequest(e -> gameLoop.stop());
     }
 
@@ -145,6 +179,15 @@ public class GameScene {
         // Update players
         for (Player p : players) {
             p.update(WIDTH, HEIGHT, obstacles);
+
+            // Override P1 aim angle with mouse aim if mouse is tracked
+            if (p.getPlayerIndex() == 0 && p.isAlive() && mouseTracked) {
+                double angle = Math.atan2(
+                    mouseY - (p.getY() + Player.SIZE / 2.0),
+                    mouseX - (p.getX() + Player.SIZE / 2.0)
+                );
+                p.setAimAngle(angle);
+            }
 
             // Respawn if timer expired and at least one ally is alive
             if (!p.isAlive() && p.getRespawnTimer() == 0 && anyPlayerAlive()) {
