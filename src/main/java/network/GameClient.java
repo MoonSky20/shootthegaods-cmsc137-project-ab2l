@@ -77,6 +77,19 @@ public class GameClient {
         }
     }
 
+    public void sendLobby(GamePacket.LobbyPacket pkt) {
+        if (!connected) return;
+        try {
+            synchronized (out) {
+                out.writeObject(pkt);
+                out.reset();
+                out.flush();
+            }
+        } catch (IOException e) {
+            connected = false;
+        }
+    }
+
     // -------------------------------------------------------
     // Receive loop (background thread)
     // -------------------------------------------------------

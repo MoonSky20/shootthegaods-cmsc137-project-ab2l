@@ -14,6 +14,7 @@ public class ClientConnection implements Runnable {
     private final Socket   socket;
     private final int      playerIndex;
     private final Runnable onDisconnect;
+    private final java.util.function.Consumer<GamePacket.LobbyPacket> onLobbyReceived;
 
     private ObjectOutputStream out;
     private ObjectInputStream  in;
@@ -21,10 +22,12 @@ public class ClientConnection implements Runnable {
     private volatile GamePacket.PlayerInputPacket latestInput = null;
     private volatile boolean connected = true;
 
-    public ClientConnection(Socket socket, int playerIndex, Runnable onDisconnect) {
-        this.socket       = socket;
-        this.playerIndex  = playerIndex;
-        this.onDisconnect = onDisconnect;
+    public ClientConnection(Socket socket, int playerIndex, Runnable onDisconnect,
+                            java.util.function.Consumer<GamePacket.LobbyPacket> onLobbyReceived) {
+        this.socket          = socket;
+        this.playerIndex     = playerIndex;
+        this.onDisconnect    = onDisconnect;
+        this.onLobbyReceived = onLobbyReceived;
     }
 
     /** Must be called (on the accept thread) before start(). */
@@ -42,8 +45,11 @@ public class ClientConnection implements Runnable {
                 Object obj = in.readObject();
                 if (obj instanceof GamePacket.PlayerInputPacket pkt) {
                     latestInput = pkt;
+                } else if (obj instanceof GamePacket.LobbyPacket lp) {
+                    if (onLobbyReceived != null) {
+                        onLobbyReceived.accept(lp);
+                    }
                 }
-                // Clients don't send anything else right now
             }
         } catch (EOFException | java.net.SocketException ignored) {
             // normal disconnect

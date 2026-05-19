@@ -30,6 +30,12 @@ public class ChooseAPlayerScene {
     private final List<Image> selectedRunImages = new ArrayList<>();
     private Text titleText;
 
+    private int myIndex = -1;
+    private network.GameServer server;
+    private network.GameClient client;
+    private long seed;
+    private boolean networkMode = false;
+
     public ChooseAPlayerScene(Stage stage, int playerCount) {
         Canvas canvas = new Canvas(GameScene.WIDTH, GameScene.HEIGHT);
 
@@ -52,15 +58,15 @@ public class ChooseAPlayerScene {
         options.setAlignment(Pos.CENTER);
 
         options.getChildren()
-                .add(createCharacterOption(stage, playerCount, "Wizard", "/assets/characters/wizard_male/Idle.png"));
+                .add(createCharacterOption(stage, playerCount, "Wizard", "/assets/characters/wizard_male/Idle.png", 0));
         options.getChildren()
-                .add(createCharacterOption(stage, playerCount, "Archer", "/assets/characters/archer_male/Idle.png"));
+                .add(createCharacterOption(stage, playerCount, "Archer", "/assets/characters/archer_male/Idle.png", 1));
         options.getChildren()
-                .add(createCharacterOption(stage, playerCount, "Swordsman", "/assets/characters/swordsman/Idle.png"));
+                .add(createCharacterOption(stage, playerCount, "Swordsman", "/assets/characters/swordsman/Idle.png", 2));
         options.getChildren()
-                .add(createCharacterOption(stage, playerCount, "Enchantress", "/assets/female_charc/Enchantress/Idle.png"));
+                .add(createCharacterOption(stage, playerCount, "Enchantress", "/assets/female_charc/Enchantress/Idle.png", 3));
         options.getChildren()
-                .add(createCharacterOption(stage, playerCount, "Musketeer", "/assets/female_charc/Musketeer/Idle.png"));
+                .add(createCharacterOption(stage, playerCount, "Musketeer", "/assets/female_charc/Musketeer/Idle.png", 4));
 
 
         Button backBtn = makeBtn("BACK");
@@ -84,19 +90,17 @@ public class ChooseAPlayerScene {
         }
 
         timer = new AnimationTimer() {
-            private long lastUpdate = 0;
-            private int tick = 0;
-
             @Override
             public void handle(long now) {
-                if (now - lastUpdate >= 100_000_000) { // ~10 updates per second
+                // Keep default horizontal sprite sheet rendering
+                if (now - lastUpdate >= 100_000_000) {
                     tick++;
                     for (int i = 0; i < characterViews.size(); i++) {
                         Image img = characterImages.get(i);
                         ImageView view = characterViews.get(i);
                         if (img != null) {
                             double frameHeight = img.getHeight();
-                            double frameWidth = frameHeight; // square frames
+                            double frameWidth = frameHeight;
                             int totalFrames = (int) Math.max(1, img.getWidth() / frameWidth);
                             int currentFrame = tick % totalFrames;
                             view.setViewport(new Rectangle2D(currentFrame * frameWidth, 0, frameWidth, frameHeight));
@@ -105,11 +109,103 @@ public class ChooseAPlayerScene {
                     lastUpdate = now;
                 }
             }
+            private long lastUpdate = 0;
+            private int tick = 0;
         };
         timer.start();
     }
 
-    private VBox createCharacterOption(Stage stage, int playerCount, String name, String imagePath) {
+    public ChooseAPlayerScene(Stage stage, int myIndex, network.GameServer server, network.GameClient client, long seed) {
+        this.networkMode = true;
+        this.myIndex = myIndex;
+        this.server = server;
+        this.client = client;
+        this.seed = seed;
+
+        if (client != null) {
+            client.setOnLobbyReceived(null);
+            client.setOnStateReceived(null);
+        }
+
+        Canvas canvas = new Canvas(GameScene.WIDTH, GameScene.HEIGHT);
+
+        Font mainFont = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"), 48);
+        if (mainFont == null)
+            mainFont = Font.font("Arial", 48);
+        DropShadow titleShadow = pixelShadow("#5a1a00", 3, 3);
+
+        titleText = new Text("PLAYER " + (myIndex + 1) + " CHOOSE YOUR CLASS");
+        titleText.setFont(mainFont);
+        titleText.setFill(Color.web("#FFE066"));
+        titleText.setEffect(titleShadow);
+
+        VBox titleContainer = new VBox(titleText);
+        titleContainer.setAlignment(Pos.CENTER);
+        titleContainer.getStyleClass().add("retro-box");
+        titleContainer.setMaxWidth(600);
+
+        HBox options = new HBox(40);
+        options.setAlignment(Pos.CENTER);
+
+        options.getChildren()
+                .add(createCharacterOption(stage, 1, "Wizard", "/assets/characters/wizard_male/Idle.png", 0));
+        options.getChildren()
+                .add(createCharacterOption(stage, 1, "Archer", "/assets/characters/archer_male/Idle.png", 1));
+        options.getChildren()
+                .add(createCharacterOption(stage, 1, "Swordsman", "/assets/characters/swordsman/Idle.png", 2));
+        options.getChildren()
+                .add(createCharacterOption(stage, 1, "Enchantress", "/assets/female_charc/Enchantress/Idle.png", 3));
+        options.getChildren()
+                .add(createCharacterOption(stage, 1, "Musketeer", "/assets/female_charc/Musketeer/Idle.png", 4));
+
+        Button backBtn = makeBtn("BACK");
+        backBtn.setMaxWidth(160);
+        backBtn.setOnAction(e -> {
+            if (timer != null)
+                timer.stop();
+            if (client != null) client.disconnect();
+            if (server != null) server.stop();
+            stage.setScene(new MenuScene(stage).getScene());
+        });
+
+        VBox content = new VBox(40, titleContainer, options, backBtn);
+        content.setAlignment(Pos.CENTER);
+
+        StackPane root = new StackPane(canvas, content);
+        root.getStyleClass().add("root");
+
+        scene = new Scene(root, GameScene.WIDTH, GameScene.HEIGHT);
+        try {
+            scene.getStylesheets().add(getClass().getResource("/css/main.css").toExternalForm());
+        } catch (Exception ignored) {
+        }
+
+        timer = new AnimationTimer() {
+            @Override
+            public void handle(long now) {
+                if (now - lastUpdate >= 100_000_000) {
+                    tick++;
+                    for (int i = 0; i < characterViews.size(); i++) {
+                        Image img = characterImages.get(i);
+                        ImageView view = characterViews.get(i);
+                        if (img != null) {
+                            double frameHeight = img.getHeight();
+                            double frameWidth = frameHeight;
+                            int totalFrames = (int) Math.max(1, img.getWidth() / frameWidth);
+                            int currentFrame = tick % totalFrames;
+                            view.setViewport(new Rectangle2D(currentFrame * frameWidth, 0, frameWidth, frameHeight));
+                        }
+                    }
+                    lastUpdate = now;
+                }
+            }
+            private long lastUpdate = 0;
+            private int tick = 0;
+        };
+        timer.start();
+    }
+
+    private VBox createCharacterOption(Stage stage, int playerCount, String name, String imagePath, int charIdx) {
         VBox box = new VBox(20);
         box.setAlignment(Pos.CENTER);
 
@@ -147,6 +243,13 @@ public class ChooseAPlayerScene {
         final Image finalImg = img;
         final Image finalRunImg = runImg;
         btn.setOnAction(e -> {
+            if (networkMode) {
+                if (timer != null) timer.stop();
+                NetworkGameScene ngs = new NetworkGameScene(stage, server, client, myIndex, seed);
+                stage.setScene(ngs.getScene());
+                return;
+            }
+
             selectedImages.add(finalImg);
             selectedRunImages.add(finalRunImg);
             currentPlayerSelecting++;

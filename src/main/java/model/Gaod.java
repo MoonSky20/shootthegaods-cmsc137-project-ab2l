@@ -8,27 +8,46 @@ public class Gaod {
 
     public static final int SIZE = 40;
 
-    public enum Type { BLUE, RED }
+    public enum Type {
+        RED, BLUE
+    }
 
     private double x, y;
     private double speed;
     private int    health;
+    private int    maxHealth;
     private boolean alive = true;
-    private Type   type;
-    private int    animationTick = 0;
+    private Type type = (new java.util.Random().nextBoolean()) ? Type.RED : Type.BLUE;
+    private int animationTick = 0;
+
+    public Gaod(double x, double y, double speed, int health) {
+        this.x         = x;
+        this.y         = y;
+        this.speed     = speed;
+        this.health    = health;
+        this.maxHealth = health;
+    }
 
     public Gaod(double x, double y, double speed, int health, Type type) {
-        this.x      = x;
-        this.y      = y;
-        this.speed  = speed;
-        this.health = health;
-        this.type   = type;
+        this.x         = x;
+        this.y         = y;
+        this.speed     = speed;
+        this.health    = health;
+        this.maxHealth = health;
+        this.type      = type;
     }
+
+    public Type getType() { return type; }
+    public void setType(Type type) { this.type = type; }
 
     /**
      * Moves this Gaod toward the nearest living player.
      * Called every frame by the game loop.
      */
+    public void update(java.util.List<Player> players) {
+        update(players, java.util.Collections.emptyList());
+    }
+
     public void update(java.util.List<Player> players, java.util.List<Obstacle> obstacles) {
         if (!alive) return;
         animationTick++;
@@ -92,11 +111,12 @@ public class Gaod {
     }
 
     // --- Getters ---
-    public double  getX()     { return x; }
-    public double  getY()     { return y; }
-    public boolean isAlive()  { return alive; }
-    public double  getSpeed() { return speed; }
+    public double  getX()        { return x; }
+    public double  getY()        { return y; }
+    public boolean isAlive()     { return alive; }
+    public double  getSpeed()    { return speed; }
     public void    setSpeed(double s) { this.speed = s; }
-    public Type    getType()  { return type; }
     public int     getAnimationTick() { return animationTick; }
+    public int     getHealth()   { return health; }
+    public int     getMaxHealth(){ return maxHealth; }
 }

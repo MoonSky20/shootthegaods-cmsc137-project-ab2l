@@ -1,7 +1,7 @@
 package model;
 
-import javafx.scene.image.Image;
 import java.util.List;
+import javafx.scene.image.Image;
 
 /**
  * Player — represents one of the 1-4 co-op players.
@@ -39,9 +39,6 @@ public class Player {
     // Weapon
     private String currentWeapon = "Pistol";
 
-    private Image image;
-    private int animationTick = 0;
-
     public Player(int playerIndex, String name, double startX, double startY) {
         this.playerIndex = playerIndex;
         this.name        = name;
@@ -77,21 +74,25 @@ public class Player {
             dy *= 0.707;
         }
 
-        // Resolve X axis
+        // Resolve x axis and obstacles collision
         x += dx;
-        for (Obstacle o : Obstacles) {
-            if (o.isColliding(x, y, SIZE)) {
-                x -= dx; // Revert X movement if colliding
-                break;
+        if (Obstacles != null) {
+            for (Obstacle o : Obstacles) {
+                if (o.isColliding(x, y, SIZE)) {
+                    x -= dx;
+                    break;
+                }
             }
         }
 
-        // Resolve Y axis
+        // Resolve y axis and obstacles collision
         y += dy;
-        for (Obstacle o : Obstacles) {
-            if (o.isColliding(x, y, SIZE)) {
-                y -= dy; // Revert Y movement if colliding
-                break;
+        if (Obstacles != null) {
+            for (Obstacle o : Obstacles) {
+                if (o.isColliding(x, y, SIZE)) {
+                    y -= dy;
+                    break;
+                }
             }
         }
 
@@ -138,7 +139,7 @@ public class Player {
     /** Checks AABB collision with a Gaod. */
     public boolean isCollidingWith(double ex, double ey, int eSize) {
         return x < ex + eSize && x + SIZE > ex &&
-               y < ey + eSize && y + SIZE > ey;
+                y < ey + eSize && y + SIZE > ey;
     }
 
     // --- Getters & Setters ---
@@ -155,13 +156,23 @@ public class Player {
     public void    setAimAngle(double angle) { this.aimAngle = angle; }
     public String  getCurrentWeapon(){ return currentWeapon; }
     public void    setCurrentWeapon(String w) { this.currentWeapon = w; }
-    public Image   getImage()        { return image; }
-    public void    setImage(Image img) { this.image = img; }
+
+    private int    characterIndex = 0;
+    public int     getCharacterIndex() { return characterIndex; }
+    public void    setCharacterIndex(int idx) { this.characterIndex = idx; }
+
+    private Image  image;
     private Image  runImage;
-    public Image   getRunImage()     { return runImage; }
-    public void    setRunImage(Image img) { this.runImage = img; }
-    public int     getAnimationTick() { return animationTick; }
-    public boolean isMoving()        { return movingUp || movingDown || movingLeft || movingRight; }
+    private int    animationTick = 0;
+
+    public Image getImage() { return image; }
+    public void setImage(Image img) { this.image = img; }
+
+    public Image getRunImage() { return runImage; }
+    public void setRunImage(Image img) { this.runImage = img; }
+
+    public int getAnimationTick() { return animationTick; }
+    public boolean isMoving() { return movingUp || movingDown || movingLeft || movingRight; }
 
     public void setMovingUp(boolean v)    { movingUp    = v; }
     public void setMovingDown(boolean v)  { movingDown  = v; }

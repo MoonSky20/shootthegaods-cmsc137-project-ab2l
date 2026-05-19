@@ -69,7 +69,8 @@ public class GamePacket {
             PLAYER_LEFT,        // server → all: someone disconnected
             START_GAME,         // server → all: game is beginning
             PING,               // either direction: keep-alive / RTT
-            HOST_DISCONNECTED   // server → all: fatal, return to menu
+            HOST_DISCONNECTED,  // server → all: fatal, return to menu
+            SELECT_CHARACTER    // client → server: chosen character, server → all: sync choice
         }
 
         public Type   type;
@@ -78,6 +79,8 @@ public class GamePacket {
         public int    targetCount;     // how many players the host wants
         public String message;         // optional human-readable text
         public long   timestamp;
+        public int    characterIndex;  // valid for SELECT_CHARACTER
+        public long   seed;            // valid for START_GAME
 
         public LobbyPacket(Type t) { type = t; timestamp = System.currentTimeMillis(); }
     }
@@ -94,6 +97,7 @@ public class GamePacket {
         public double  aimAngle;
         public int     respawnTimer;
         public boolean shooting;
+        public int     characterIndex;
     }
 
     public static class GaodState implements Serializable {
@@ -101,6 +105,9 @@ public class GamePacket {
         public int    id;
         public double x, y;
         public boolean alive;
+        public int    type; // 0 = blue, 1 = red
+        public int    health;
+        public int    maxHealth;
     }
 
     public static class BulletState implements Serializable {
@@ -108,5 +115,6 @@ public class GamePacket {
         public double  x, y;
         public int     ownerIndex;
         public boolean active;
+        public double  angle;
     }
 }

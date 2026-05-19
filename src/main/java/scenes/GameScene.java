@@ -75,6 +75,7 @@ public class GameScene {
     private int playerCount;
     private final Stage stage;
     private int levelMessageTimer = 120;
+
     private Image blueGaodImg;
     private Image redGaodImg;
     private Image bulletImg;
@@ -84,6 +85,11 @@ public class GameScene {
     private Font msgFont;
     private Font infoFont;
     private Font nameFont;
+    private double mouseX = 0;
+    private double mouseY = 0;
+    private boolean mouseTracked = false;
+    private boolean mouseDown = false;
+
 
     public GameScene(Stage stage, int playerCount) {
         this.stage = stage;
@@ -162,8 +168,18 @@ public class GameScene {
         startTime = System.currentTimeMillis();
         gameLoop = new GameLoop(this::update, () -> render(floorTile));
         gameLoop.start();
-        // Mouse shooting for Player 1
-        // Mouse shooting for Player 1
+
+        // Continuous mouse tracking and continuous shooting for Player 1
+        scene.setOnMouseMoved(e -> {
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+        });
+        scene.setOnMouseDragged(e -> {
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+        });
         scene.setOnMousePressed(e -> {
             if (gameOver) {
                 gameLoop.stop();
@@ -171,13 +187,18 @@ public class GameScene {
                 stage.setScene(menu.getScene());
                 return;
             }
-
-            if (!players.isEmpty() && players.get(0).isAlive()) {
-                Player p1 = players.get(0);
-                double angle = Math.atan2(
-                        e.getY() - (p1.getY() + Player.SIZE / 2.0),
-                        e.getX() - (p1.getX() + Player.SIZE / 2.0));
-                fireBullet(p1, angle);
+            mouseX = e.getX();
+            mouseY = e.getY();
+            mouseTracked = true;
+            mouseDown = true;
+            if (!players.isEmpty()) {
+                players.get(0).setShooting(true);
+            }
+        });
+        scene.setOnMouseReleased(e -> {
+            mouseDown = false;
+            if (!players.isEmpty()) {
+                players.get(0).setShooting(false);
             }
         });
 
@@ -194,9 +215,22 @@ public class GameScene {
 
         inputHandler.update();
 
+        if (!players.isEmpty()) {
+            players.get(0).setShooting(mouseDown || inputHandler.isKeyPressed(javafx.scene.input.KeyCode.SPACE));
+        }
+
         // Update players
         for (Player p : players) {
             p.update(WIDTH, HEIGHT, obstacles);
+
+            // Override P1 aim angle if mouse is tracked (to prevent movement snapping)
+            if (p.getPlayerIndex() == 0 && mouseTracked && p.isAlive()) {
+                double angle = Math.atan2(
+                    mouseY - (p.getY() + Player.SIZE / 2.0),
+                    mouseX - (p.getX() + Player.SIZE / 2.0)
+                );
+                p.setAimAngle(angle);
+            }
 
             // Respawn if timer expired and at least one ally is alive
             if (!p.isAlive() && p.getRespawnTimer() == 0 && anyPlayerAlive()) {
@@ -204,10 +238,9 @@ public class GameScene {
                         SPAWN_POINTS[p.getPlayerIndex()][1]);
             }
 
-            // Keyboard shooting (P2, P3, P4)
-            if (p.getPlayerIndex() > 0 && p.canShoot()) {
+            // Unified auto-shooting for all players (P1 mouse/SPACE, others keyboard)
+            if (p.canShoot()) {
                 fireBullet(p, p.getAimAngle());
-                p.triggerShootCooldown();
             }
         }
 
@@ -406,6 +439,28 @@ public class GameScene {
                 gc.setStroke(Color.web("#ff0000"));
                 gc.setLineWidth(1);
                 gc.strokeRect(x, y, s, s);
+            }
+
+            // Health bar (only show for gaods with more than 1 max health)
+            if (g.getMaxHealth() > 1) {
+                double barW = 36;
+                double barH = 5;
+                double barX = x + s / 2.0 - barW / 2.0;
+                double barY = y - 10;
+                double hpRatio = (double) g.getHealth() / g.getMaxHealth();
+
+                // Background
+                gc.setFill(Color.web("#00000099"));
+                gc.fillRoundRect(barX - 1, barY - 1, barW + 2, barH + 2, 3, 3);
+
+                // Red underlay
+                gc.setFill(Color.web("#e94560"));
+                gc.fillRoundRect(barX, barY, barW, barH, 2, 2);
+
+                // Green fill proportional to HP
+                Color hpColor = hpRatio > 0.5 ? Color.web("#7fff00") : (hpRatio > 0.25 ? Color.web("#ffcc00") : Color.web("#ff4444"));
+                gc.setFill(hpColor);
+                gc.fillRoundRect(barX, barY, barW * hpRatio, barH, 2, 2);
             }
         }
     }

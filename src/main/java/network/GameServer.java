@@ -37,6 +37,8 @@ public class GameServer {
     private ServerSocket serverSocket;
 
     private final List<ClientConnection> clients = new CopyOnWriteArrayList<>();
+    private final int[] chosenCharacters = new int[4]; // synchronized character choices (default Wizard = 0)
+    private final boolean[] chosenReady = new boolean[4]; // tracks if client has selected their character
 
     // ---- Authoritative game state ----
     private final List<Player>   players = new ArrayList<>();
@@ -53,7 +55,7 @@ public class GameServer {
     private int levelMessageTimer = 0;
 
     private static final double[][] SPAWN_POINTS = {
-        { 80,  80  }, { 840, 80  }, { 80,  520 }, { 840, 520 }
+            { 80,  80  }, { 840, 80  }, { 80,  520 }, { 840, 520 }
     };
 
     // Callbacks so host UI can react (called from server threads)
@@ -78,7 +80,7 @@ public class GameServer {
         serverSocket.setReuseAddress(true);
         accepting = true;
         System.out.println("[Server] Listening on " + getLocalIP() + ":" + PORT
-                           + "  (waiting for " + targetCount + " players)");
+                + "  (waiting for " + targetCount + " players)");
 
         Thread t = new Thread(this::acceptLoop, "server-accept");
         t.setDaemon(true);
@@ -109,7 +111,7 @@ public class GameServer {
                 int idx = clients.size();
                 if (idx >= targetCount) { sock.close(); continue; }
 
-                ClientConnection cc = new ClientConnection(sock, idx, () -> onClientDisconnect(idx));
+                ClientConnection cc = new ClientConnection(sock, idx, () -> onClientDisconnect(idx), pkt -> handleLobbyPacket(idx, pkt));
                 cc.initStreams();
                 clients.add(cc);
 
@@ -119,6 +121,16 @@ public class GameServer {
                 assign.connectedCount = clients.size();
                 assign.targetCount    = targetCount;
                 cc.sendLobby(assign);
+
+                // Send already chosen characters to this new client so their UI slots synchronize perfectly
+                for (int i = 0; i < idx; i++) {
+                    if (chosenReady[i]) {
+                        GamePacket.LobbyPacket existing = new GamePacket.LobbyPacket(GamePacket.LobbyPacket.Type.SELECT_CHARACTER);
+                        existing.assignedIndex = i;
+                        existing.characterIndex = chosenCharacters[i];
+                        cc.sendLobby(existing);
+                    }
+                }
 
                 // Tell everyone someone joined
                 GamePacket.LobbyPacket joined = new GamePacket.LobbyPacket(GamePacket.LobbyPacket.Type.PLAYER_JOINED);
@@ -134,13 +146,6 @@ public class GameServer {
 
                 if (onPlayerJoined != null) onPlayerJoined.accept(clients.size());
 
-                // Auto-start when we hit the target
-                if (clients.size() == targetCount) {
-                    accepting = false;
-                    try { serverSocket.close(); } catch (IOException ignored) {}
-                    startGame();
-                }
-
             } catch (IOException e) {
                 if (accepting) System.err.println("[Server] Accept error: " + e.getMessage());
                 break;
@@ -148,12 +153,48 @@ public class GameServer {
         }
     }
 
+    private void handleLobbyPacket(int idx, GamePacket.LobbyPacket pkt) {
+        if (pkt.type == GamePacket.LobbyPacket.Type.SELECT_CHARACTER) {
+            pkt.assignedIndex = idx;
+            chosenCharacters[idx] = pkt.characterIndex;
+            chosenReady[idx] = true;
+            broadcast(pkt);
+
+            // Auto-start only when we hit target connected players AND all connected players have selected their class
+            if (clients.size() == targetCount && allReady()) {
+                accepting = false;
+                try { if (serverSocket != null) serverSocket.close(); } catch (IOException ignored) {}
+                startGame();
+            }
+        }
+    }
+
+    private boolean allReady() {
+        for (int i = 0; i < clients.size(); i++) {
+            if (!chosenReady[i]) return false;
+        }
+        return true;
+    }
+
     /** Starts the game simulation (called automatically when lobby is full). */
     private void startGame() {
         // Build player list
         for (int i = 0; i < clients.size(); i++) {
-            players.add(new Player(i, "P" + (i + 1), SPAWN_POINTS[i][0], SPAWN_POINTS[i][1]));
+            Player p = new Player(i, "P" + (i + 1), SPAWN_POINTS[i][0], SPAWN_POINTS[i][1]);
+            p.setCharacterIndex(chosenCharacters[i]);
+            players.add(p);
         }
+
+        // Spawn authoritative obstacles with a shared seed
+        long seed = new java.util.Random().nextLong();
+        java.util.Random rand = new java.util.Random(seed);
+        obstacles.clear();
+        for (int i = 0; i < 15; i++) {
+            double ox = 100 + rand.nextDouble() * (MAP_WIDTH - 200);
+            double oy = 100 + rand.nextDouble() * (MAP_HEIGHT - 200);
+            obstacles.add(new Obstacle(ox, oy, 30, 30, "/assets/obstacles/Plants.png", true, 448, 0, 64, 96));
+        }
+
         waveManager = new WaveManager(MAP_WIDTH, MAP_HEIGHT);
         gameRunning = true;
 
@@ -161,6 +202,7 @@ public class GameServer {
         GamePacket.LobbyPacket start = new GamePacket.LobbyPacket(GamePacket.LobbyPacket.Type.START_GAME);
         start.connectedCount = clients.size();
         start.targetCount    = targetCount;
+        start.seed           = seed;
         broadcast(start);
 
         if (onGameStarted != null) onGameStarted.run();
@@ -208,20 +250,29 @@ public class GameServer {
             p.setMovingLeft(inp.movingLeft);
             p.setMovingRight(inp.movingRight);
             p.setShooting(inp.shooting);
-
-            // Mouse aim: client always sends cursor position
-            if (p.isAlive() && inp.shooting) {
-                double angle = Math.atan2(
-                    inp.mouseY - (p.getY() + Player.SIZE / 2.0),
-                    inp.mouseX - (p.getX() + Player.SIZE / 2.0)
-                );
-                p.setAimAngle(angle);
-            }
         }
 
         // ---- Update players ----
         for (Player p : players) {
             p.update(MAP_WIDTH, MAP_HEIGHT, obstacles);
+
+            // Override aim angle with mouse aim for all active network clients
+            if (p.isAlive()) {
+                for (ClientConnection cc : clients) {
+                    if (cc.getPlayerIndex() == p.getPlayerIndex()) {
+                        GamePacket.PlayerInputPacket inp = cc.getLatestInput();
+                        if (inp != null) {
+                            double angle = Math.atan2(
+                                    inp.mouseY - (p.getY() + Player.SIZE / 2.0),
+                                    inp.mouseX - (p.getX() + Player.SIZE / 2.0)
+                            );
+                            p.setAimAngle(angle);
+                        }
+                        break;
+                    }
+                }
+            }
+
             if (!p.isAlive() && p.getRespawnTimer() == 0 && anyAlive()) {
                 p.respawn(SPAWN_POINTS[p.getPlayerIndex()][0], SPAWN_POINTS[p.getPlayerIndex()][1]);
             }
@@ -290,6 +341,7 @@ public class GameServer {
             Player p = players.get(idx);
             while (p.isAlive()) p.takeDamage(99999);
         }
+        chosenReady[idx] = false;
         GamePacket.LobbyPacket left = new GamePacket.LobbyPacket(GamePacket.LobbyPacket.Type.PLAYER_LEFT);
         left.connectedCount = (int) clients.stream().filter(ClientConnection::isConnected).count();
         left.targetCount    = targetCount;
@@ -318,6 +370,7 @@ public class GameServer {
             ps.aimAngle     = p.getAimAngle();
             ps.respawnTimer = p.getRespawnTimer();
             ps.shooting     = p.isShooting();
+            ps.characterIndex = p.getCharacterIndex();
             s.players.add(ps);
         }
 
@@ -328,6 +381,9 @@ public class GameServer {
             gs.x     = g.getX();
             gs.y     = g.getY();
             gs.alive = g.isAlive();
+            gs.type  = g.getType() == Gaod.Type.RED ? 1 : 0;
+            gs.health    = g.getHealth();
+            gs.maxHealth = g.getMaxHealth();
             s.gaods.add(gs);
         }
 
@@ -338,6 +394,7 @@ public class GameServer {
             bs.y          = b.getY();
             bs.ownerIndex = b.getOwnerIndex();
             bs.active     = b.isActive();
+            bs.angle      = b.getAngle();
             s.bullets.add(bs);
         }
 

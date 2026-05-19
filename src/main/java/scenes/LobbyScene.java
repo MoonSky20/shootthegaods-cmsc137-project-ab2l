@@ -1,5 +1,6 @@
 package scenes;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -7,6 +8,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -47,6 +49,14 @@ public class LobbyScene {
         Color.web("#7fff00"), Color.web("#ff69b4"),
     };
 
+    private static final String[] CHARACTER_PATHS = {
+        "/assets/characters/wizard_male/Idle.png",
+        "/assets/characters/archer_male/Idle.png",
+        "/assets/characters/swordsman/Idle.png",
+        "/assets/female_charc/Enchantress/Idle.png",
+        "/assets/female_charc/Musketeer/Idle.png"
+    };
+
     private final Scene  scene;
     private final Stage  stage;
 
@@ -59,11 +69,24 @@ public class LobbyScene {
     private GameClient client;
     private int myIndex = -1;
 
+    // Character choice state
+    private final int[] chosenCharacters = new int[4]; // default Wizard = 0
+    private final boolean[] hasChosenClass = new boolean[4];
+    private final Button[] charButtons = new Button[5];
+    private boolean hasChosen = false;
+    private int currentConnectedCount = 0;
+    private int currentTargetCount = 0;
+    private final Canvas[] slotCanvases = new Canvas[4];
+    private AnimationTimer timer;
+    private final Image[] characterImages = new Image[5];
+
     // -------------------------------------------------------
     // Constructor — HOST flow
     // -------------------------------------------------------
     public LobbyScene(Stage stage, int playerCount) {
         this.stage = stage;
+
+        initLobby(playerCount);
 
         Canvas canvas    = new Canvas(GameScene.WIDTH, GameScene.HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -76,6 +99,7 @@ public class LobbyScene {
         if (playerCount == 1) {
             // No networking needed — go straight to local game
             Platform.runLater(() -> {
+                cleanup();
                 GameScene gs = new GameScene(stage, 1);
                 stage.setScene(gs.getScene());
             });
@@ -90,6 +114,8 @@ public class LobbyScene {
     // -------------------------------------------------------
     public LobbyScene(Stage stage, String serverIP) {
         this.stage = stage;
+
+        initLobby(-1);
 
         Canvas canvas      = new Canvas(GameScene.WIDTH, GameScene.HEIGHT);
         GraphicsContext gc = canvas.getGraphicsContext2D();
@@ -106,6 +132,93 @@ public class LobbyScene {
     // -------------------------------------------------------
     // UI construction
     // -------------------------------------------------------
+
+    private void initLobby(int targetCount) {
+        this.currentTargetCount = targetCount;
+        for (int i = 0; i < 5; i++) {
+            try {
+                characterImages[i] = new Image(getClass().getResourceAsStream(CHARACTER_PATHS[i]));
+            } catch (Exception e) {
+                System.err.println("Error loading character image: " + CHARACTER_PATHS[i]);
+            }
+        }
+
+        timer = new AnimationTimer() {
+            private long lastUpdate = 0;
+            private int tick = 0;
+
+            @Override
+            public void handle(long now) {
+                if (now - lastUpdate >= 100_000_000) { // ~10 updates per second
+                    tick++;
+                    for (int i = 0; i < 4; i++) {
+                        drawSlot(i, tick);
+                    }
+                    lastUpdate = now;
+                }
+            }
+        };
+        timer.start();
+    }
+
+    private void drawSlot(int i, int tick) {
+        Canvas box = slotCanvases[i];
+        if (box == null) return;
+        GraphicsContext gc = box.getGraphicsContext2D();
+        double w = box.getWidth();
+        double h = box.getHeight();
+
+        gc.clearRect(0, 0, w, h);
+
+        boolean needed = (currentTargetCount < 0) || (i < currentTargetCount);
+        boolean connected = (i < currentConnectedCount);
+
+        Color c = SLOT_COLORS[i];
+        // Border
+        gc.setStroke(needed ? c : Color.web("#333333"));
+        gc.setLineWidth(3);
+        gc.strokeRect(2, 2, w - 4, h - 4);
+
+        // Fill background
+        gc.setFill(needed ? c.deriveColor(0, 1, 0.15, 1) : Color.web("#1a1a1a"));
+        gc.fillRect(3, 3, w - 6, h - 6);
+
+        if (connected && needed) {
+            int charIdx = chosenCharacters[i];
+            Image img = characterImages[charIdx];
+            if (img != null) {
+                double frameHeight = img.getHeight();
+                double frameWidth = frameHeight; // square frames
+                int totalFrames = (int) Math.max(1, img.getWidth() / frameWidth);
+                int currentFrame = tick % totalFrames;
+
+                double drawW = 80;
+                double drawH = 80;
+                double drawX = (w - drawW) / 2.0;
+                double drawY = (h - drawH) / 2.0 - 5; // offset up slightly for text/label
+
+                gc.setImageSmoothing(false);
+                gc.drawImage(img,
+                             currentFrame * frameWidth, 0, frameWidth, frameHeight,
+                             drawX, drawY, drawW, drawH);
+            } else {
+                gc.setFill(c);
+                gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
+                gc.fillText("P" + (i + 1), 35, 58);
+            }
+        } else {
+            gc.setFill(Color.web("#444444"));
+            gc.setFont(Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
+            gc.fillText("P" + (i + 1), 35, 58);
+        }
+    }
+
+    private void disableSelectorButtons() {
+        for (Button btn : charButtons) {
+            btn.setDisable(true);
+            btn.setStyle("-fx-background-color:#1a0f0a;-fx-text-fill:#555555;-fx-border-color:#444444;-fx-border-width:3px;-fx-background-radius:0;-fx-border-radius:0;");
+        }
+    }
 
     private StackPane buildUI(Canvas canvas, int targetCount) {
         Font mainFont = Font.loadFont(
@@ -144,6 +257,35 @@ public class LobbyScene {
             slots.getChildren().add(buildSlotBox(i, needed, slotLabels[i]));
         }
 
+        // Character selector container
+        Text selectTitle = new Text("CHOOSE YOUR CHARACTER");
+        selectTitle.setFont(subFont);
+        selectTitle.setFill(COLOR_GOLD);
+        selectTitle.setEffect(shadow);
+
+        HBox selectorRow = new HBox(12);
+        selectorRow.setAlignment(Pos.CENTER);
+        String[] classes = {"Wizard", "Archer", "Swordsman", "Enchantress", "Musketeer"};
+        for (int cIdx = 0; cIdx < 5; cIdx++) {
+            final int index = cIdx;
+            Button btn = styledClassButton(classes[cIdx]);
+            btn.setOnAction(e -> {
+                if (myIndex == -1 || hasChosen) return;
+                hasChosen = true;
+
+                GamePacket.LobbyPacket pkt = new GamePacket.LobbyPacket(GamePacket.LobbyPacket.Type.SELECT_CHARACTER);
+                pkt.characterIndex = index;
+                client.sendLobby(pkt);
+
+                disableSelectorButtons();
+            });
+            charButtons[cIdx] = btn;
+            selectorRow.getChildren().add(btn);
+        }
+
+        VBox selectorBox = new VBox(10, selectTitle, selectorRow);
+        selectorBox.setAlignment(Pos.CENTER);
+
         // Cancel / back button
         Button cancelBtn = styledButton("← Cancel");
         cancelBtn.setOnAction(e -> {
@@ -152,7 +294,7 @@ public class LobbyScene {
             stage.setScene(menu.getScene());
         });
 
-        VBox content = new VBox(22, title, ipText, statusText, slots, cancelBtn);
+        VBox content = new VBox(20, title, ipText, statusText, slots, selectorBox, cancelBtn);
         content.setAlignment(Pos.CENTER);
 
         StackPane root = new StackPane(canvas, content);
@@ -162,8 +304,9 @@ public class LobbyScene {
 
     private StackPane buildSlotBox(int i, boolean needed, Text label) {
         Canvas box = new Canvas(110, 110);
-        GraphicsContext gc = box.getGraphicsContext2D();
+        slotCanvases[i] = box;
 
+        GraphicsContext gc = box.getGraphicsContext2D();
         Color c = SLOT_COLORS[i];
         // Border
         gc.setStroke(needed ? c : Color.web("#333333"));
@@ -275,8 +418,6 @@ public class LobbyScene {
                     int tc  = lobby.targetCount;
                     statusText.setText(lobby.connectedCount + " / " + tc + " players connected");
                     updateSlots(lobby.connectedCount, tc);
-                    // Update slot for ourselves
-                    if (myIndex < 4) slotLabels[myIndex].setText("YOU  ✔");
                 }
                 case PLAYER_JOINED -> {
                     statusText.setText(lobby.connectedCount + " / " + lobby.targetCount + " players connected");
@@ -286,9 +427,17 @@ public class LobbyScene {
                     statusText.setText(lobby.connectedCount + " / " + lobby.targetCount + " players connected");
                     updateSlots(lobby.connectedCount, lobby.targetCount);
                 }
+                case SELECT_CHARACTER -> {
+                    int pIdx = lobby.assignedIndex;
+                    if (pIdx >= 0 && pIdx < 4) {
+                        chosenCharacters[pIdx] = lobby.characterIndex;
+                        hasChosenClass[pIdx] = true;
+                        updateSlots(currentConnectedCount, currentTargetCount);
+                    }
+                }
                 case START_GAME -> {
-                    // Switch to the network game scene
-                    NetworkGameScene ngs = new NetworkGameScene(stage, server, client, myIndex);
+                    if (timer != null) timer.stop();
+                    NetworkGameScene ngs = new NetworkGameScene(stage, server, client, myIndex, lobby.seed);
                     stage.setScene(ngs.getScene());
                 }
                 case HOST_DISCONNECTED -> {
@@ -314,14 +463,30 @@ public class LobbyScene {
 
     /** Marks the first N slots as "Connected", rest as "Waiting" or "—". */
     private void updateSlots(int connected, int target) {
+        this.currentConnectedCount = connected;
+        this.currentTargetCount = target;
         for (int i = 0; i < 4; i++) {
             if (i >= target) {
                 slotLabels[i].setText("—");
             } else if (i < connected) {
-                // Don't overwrite "YOU  ✔" for our own slot
-                if (!slotLabels[i].getText().contains("YOU")) {
-                    slotLabels[i].setText("Connected ✔");
+                if (hasChosenClass[i]) {
+                    String[] classes = {"Wizard", "Archer", "Swordsman", "Enchantress", "Musketeer"};
+                    int charIdx = Math.max(0, Math.min(chosenCharacters[i], classes.length - 1));
+                    String className = classes[charIdx];
+                    if (i == myIndex) {
+                        slotLabels[i].setText("YOU (" + className + ") ✔");
+                    } else {
+                        slotLabels[i].setText("P" + (i + 1) + " (" + className + ") ✔");
+                    }
                     slotLabels[i].setFill(COLOR_GOLD);
+                } else {
+                    if (i == myIndex) {
+                        slotLabels[i].setText("YOU  ✔");
+                        slotLabels[i].setFill(COLOR_GOLD);
+                    } else {
+                        slotLabels[i].setText("Connected ✔");
+                        slotLabels[i].setFill(COLOR_GOLD);
+                    }
                 }
             } else {
                 slotLabels[i].setText("Waiting...");
@@ -331,6 +496,7 @@ public class LobbyScene {
     }
 
     private void cleanup() {
+        if (timer != null) timer.stop();
         if (client != null) client.disconnect();
         if (server != null) server.stop();
     }
@@ -366,6 +532,26 @@ public class LobbyScene {
         btn.setStyle(base);
         btn.setOnMouseEntered(e -> btn.setStyle(hover));
         btn.setOnMouseExited(e  -> btn.setStyle(base));
+        return btn;
+    }
+
+    private Button styledClassButton(String label) {
+        Button btn = new Button(label);
+        btn.setPrefWidth(125);
+        btn.setPrefHeight(35);
+        String base  = "-fx-background-color:#3b1a08;-fx-text-fill:#FFE066;-fx-font-size:12px;" +
+                       "-fx-font-weight:bold;-fx-border-color:#c8600a;-fx-border-width:3;" +
+                       "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;";
+        String hover = "-fx-background-color:#c8600a;-fx-text-fill:#FFE066;-fx-font-size:12px;" +
+                       "-fx-font-weight:bold;-fx-border-color:#FFE066;-fx-border-width:3;" +
+                       "-fx-background-radius:0;-fx-border-radius:0;-fx-cursor:hand;";
+        btn.setStyle(base);
+        btn.setOnMouseEntered(e -> {
+            if (!btn.isDisable()) btn.setStyle(hover);
+        });
+        btn.setOnMouseExited(e  -> {
+            if (!btn.isDisable()) btn.setStyle(base);
+        });
         return btn;
     }
 
