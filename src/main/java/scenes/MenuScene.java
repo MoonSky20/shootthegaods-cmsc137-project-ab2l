@@ -32,14 +32,16 @@ public class MenuScene {
 
         // ---- Fonts ----
         Font mainFont = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/ari_main.ttf"), 48);
-        Font subFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
-        Font secFont  = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
-        if (mainFont == null) mainFont = Font.font("Arial", 48);
-        if (subFont  == null) subFont  = Font.font("Arial", 13);
-        if (secFont  == null) secFont  = Font.font("Arial", 13);
+        Font subFont = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
+        Font secFont = Font.loadFont(getClass().getResourceAsStream("/assets/fonts/space_mono.ttf"), 13);
+        if (mainFont == null)
+            mainFont = Font.font("Arial", 48);
+        if (subFont == null)
+            subFont = Font.font("Arial", 13);
+        if (secFont == null)
+            secFont = Font.font("Arial", 13);
 
         DropShadow titleShadow = pixelShadow("#5a1a00", 3, 3);
-        DropShadow btnShadow   = pixelShadow("#5a1a00", 4, 4);
 
         // ---- Title ----
         Text title = new Text("SHOOT THE GAODS!");
@@ -82,16 +84,22 @@ public class MenuScene {
             Button btn = makeBtn(localLabels[i]);
             btn.setFont(secFont);
             btn.setPrefWidth(160);
-            btn.setOnAction(e -> stage.setScene(new GameScene(stage, count).getScene()));
+            btn.setOnAction(e -> stage.setScene(new ChooseAPlayerScene(stage, count).getScene()));
             localContent.getChildren().add(btn);
         }
+
+        // Add Local High Score
+        Text localHighScoreText = new Text("★ HIGH SCORE: " + core.ScoreManager.getLocalHighScore() + " ★");
+        localHighScoreText.setFont(secFont);
+        localHighScoreText.setFill(Color.web("#FFE066"));
+        localContent.getChildren().add(localHighScoreText);
 
         // StackPane: content box behind, label overlaid on top-left
         StackPane localPanel = new StackPane(localContent, localLCont);
         localPanel.setMaxWidth(220);
         StackPane.setAlignment(localLCont, Pos.TOP_LEFT);
         localLCont.setTranslateX(12);
-        localLCont.setTranslateY(-14);   // half the label height — sits on the border
+        localLCont.setTranslateY(-14); // half the label height — sits on the border
 
         // ---- Network Play panel ----
         Text netLabel = section("NETWORK PLAY", secFont);
@@ -120,8 +128,7 @@ public class MenuScene {
                 "-fx-background-color:#3b1a08;-fx-text-fill:#FFE066;" +
                         "-fx-prompt-text-fill:#aa8844;-fx-font-size:12px;" +
                         "-fx-border-color:#c8600a;-fx-border-width:2;" +
-                        "-fx-background-radius:0;-fx-border-radius:0;"
-        );
+                        "-fx-background-radius:0;-fx-border-radius:0;");
 
         // Error handling on join button
         Button joinBtn = makeBtn("Join");
@@ -137,12 +144,16 @@ public class MenuScene {
         HBox joinRow = new HBox(10, ipField, joinBtn);
         joinRow.setAlignment(Pos.CENTER);
 
-        VBox netContent = new VBox(10, hostRow, joinRow);
+        // Add Network High Score
+        Text netHighScoreText = new Text("★ HIGH SCORE: " + core.ScoreManager.getNetworkHighScore() + " ★");
+        netHighScoreText.setFont(secFont);
+        netHighScoreText.setFill(Color.web("#FFE066"));
+
+        VBox netContent = new VBox(10, hostRow, joinRow, netHighScoreText);
         netContent.setAlignment(Pos.CENTER);
         // Extra top padding so host buttons don't hide under overlay label
         netContent.setPadding(new Insets(24, 16, 16, 16));
         netContent.getStyleClass().add("main-content-box");
-
 
         // StackPane: content box behind, label overlaid on top-left
         StackPane netPanel = new StackPane(netContent, netLCont);
@@ -160,8 +171,7 @@ public class MenuScene {
         VBox content = new VBox(14,
                 titleContainer,
                 subtitleContainer,
-                panels
-        );
+                panels);
         content.setAlignment(Pos.CENTER);
         content.setFillWidth(false);
 
@@ -173,7 +183,8 @@ public class MenuScene {
         try {
             scene.getStylesheets().add(
                     getClass().getResource("/css/main.css").toExternalForm());
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
     // -------------------------------------------------------
@@ -187,7 +198,7 @@ public class MenuScene {
     private Button makeBtn(String label) {
         Button btn = new Button(label);
 
-        String base  = "-fx-background-color:#EAC33E;-fx-text-fill:#1a0f0a;" +
+        String base = "-fx-background-color:#EAC33E;-fx-text-fill:#1a0f0a;" +
                 "-fx-font-weight:bold;-fx-font-size:16px;" +
                 "-fx-max-width:infinity;-fx-padding:12px;" +
                 "-fx-border-color:#1a0f0a;-fx-border-width:3px;" +
@@ -202,17 +213,21 @@ public class MenuScene {
 
         btn.setStyle(base);
         btn.setOnMouseEntered(e -> btn.setStyle(hover));
-        btn.setOnMouseExited(e  -> btn.setStyle(base));
+        btn.setOnMouseExited(e -> btn.setStyle(base));
         return btn;
     }
 
     private DropShadow pixelShadow(String hex, double ox, double oy) {
         DropShadow ds = new DropShadow();
         ds.setColor(Color.web(hex));
-        ds.setRadius(0); ds.setSpread(0);
-        ds.setOffsetX(ox); ds.setOffsetY(oy);
+        ds.setRadius(0);
+        ds.setSpread(0);
+        ds.setOffsetX(ox);
+        ds.setOffsetY(oy);
         return ds;
     }
 
-    public Scene getScene() { return scene; }
+    public Scene getScene() {
+        return scene;
+    }
 }

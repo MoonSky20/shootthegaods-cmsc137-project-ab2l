@@ -33,7 +33,6 @@ public class WaveManager {
     private int  currentLevel    = 1;
     private int  waveTimer       = 0;   // frames elapsed in current wave
     private int  spawnTimer      = 0;   // frames until next spawn
-    private int  gaodSpawnInterval = 90; // spawn a Gaod every 1.5s initially
     private int  gaodsSpawnedThisWave = 0;
 
     private final Random random = new Random();
@@ -57,7 +56,7 @@ public class WaveManager {
         int totalToSpawn = BASE_GAOD_COUNT + (currentLevel - 1) * COUNT_INCREASE;
 
         // Spawn Gaods periodically until we've spawned enough for this wave
-        if (gaodsSpawnedThisWave < totalToSpawn && spawnTimer >= gaodSpawnInterval) {
+        if (gaodsSpawnedThisWave < totalToSpawn && spawnTimer >= getSpawnInterval()) {
             spawnTimer = 0;
             newGaods.add(spawnGaod());
             gaodsSpawnedThisWave++;
@@ -96,7 +95,17 @@ public class WaveManager {
             case 2 -> { x = -Gaod.SIZE;                      y = random.nextDouble() * mapHeight; } // left
             default-> { x = mapWidth;                        y = random.nextDouble() * mapHeight; } // right
         }
-        return new Gaod(x, y, getGaodSpeed(), 1);
+        
+        boolean isRed = random.nextBoolean();
+        double speed = getGaodSpeed();
+        int health = 1;
+        
+        if (isRed) {
+            health = 3;
+        } else {
+            speed *= 1.5;
+        }
+        return new Gaod(x, y, speed, health, isRed ? Gaod.Type.RED : Gaod.Type.BLUE);
     }
 
     /** Wave duration in frames, increases every 4 levels (+15s, capped at 60s). */
@@ -119,6 +128,13 @@ public class WaveManager {
     /** Seconds remaining in the current wave. */
     public int getSecondsRemaining() {
         return (getWaveDuration() - waveTimer) / 60;
+    }
+
+    /** The interval in frames between Gaod spawns (decreases as level goes up). */
+    private int getSpawnInterval() {
+        // Base 60 frames (1s), decreases by 5 frames per level. Min 15 frames (0.25s).
+        int interval = 60 - (currentLevel - 1) * 5;
+        return Math.max(15, interval);
     }
 
     public int getCurrentLevel() { return currentLevel; }

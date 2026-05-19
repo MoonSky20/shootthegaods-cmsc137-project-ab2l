@@ -242,7 +242,7 @@ public class GameServer {
 
         // ---- Update Gaods ----
         for (Gaod g : gaods) {
-            g.update(players);
+            g.update(players, obstacles);
             for (Player p : players) {
                 if (p.isAlive() && g.isAlive() && g.isCollidingWithPlayer(p)) {
                     p.takeDamage(waveManager.getRespawnDelayFrames());

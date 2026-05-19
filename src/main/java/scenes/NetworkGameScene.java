@@ -141,7 +141,12 @@ public class NetworkGameScene {
                 levelFlashTimer = 120;
             }
             currentState = state;
-            if (state.gameOver) gameOver = true;
+            if (state.gameOver) {
+                if (!gameOver) {
+                    core.ScoreManager.updateNetworkHighScore(state.score);
+                }
+                gameOver = true;
+            }
         });
 
         client.setOnDisconnect(() -> Platform.runLater(() -> {

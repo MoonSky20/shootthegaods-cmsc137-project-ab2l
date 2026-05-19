@@ -1,5 +1,6 @@
 package model;
 
+import javafx.scene.image.Image;
 import java.util.List;
 
 /**
@@ -38,6 +39,9 @@ public class Player {
     // Weapon
     private String currentWeapon = "Pistol";
 
+    private Image image;
+    private int animationTick = 0;
+
     public Player(int playerIndex, String name, double startX, double startY) {
         this.playerIndex = playerIndex;
         this.name        = name;
@@ -58,6 +62,8 @@ public class Player {
             return;
         }
 
+        animationTick++;
+
         // Movement
         double dx = 0, dy = 0;
         if (movingUp)    dy -= SPEED; // Add constraints here
@@ -71,10 +77,23 @@ public class Player {
             dy *= 0.707;
         }
 
-        // Resolve x axis
-
+        // Resolve X axis
         x += dx;
+        for (Obstacle o : Obstacles) {
+            if (o.isColliding(x, y, SIZE)) {
+                x -= dx; // Revert X movement if colliding
+                break;
+            }
+        }
+
+        // Resolve Y axis
         y += dy;
+        for (Obstacle o : Obstacles) {
+            if (o.isColliding(x, y, SIZE)) {
+                y -= dy; // Revert Y movement if colliding
+                break;
+            }
+        }
 
         // Update aim angle based on movement direction (for keyboard shooters)
         if (dx != 0 || dy != 0) aimAngle = Math.atan2(dy, dx);
@@ -136,6 +155,13 @@ public class Player {
     public void    setAimAngle(double angle) { this.aimAngle = angle; }
     public String  getCurrentWeapon(){ return currentWeapon; }
     public void    setCurrentWeapon(String w) { this.currentWeapon = w; }
+    public Image   getImage()        { return image; }
+    public void    setImage(Image img) { this.image = img; }
+    private Image  runImage;
+    public Image   getRunImage()     { return runImage; }
+    public void    setRunImage(Image img) { this.runImage = img; }
+    public int     getAnimationTick() { return animationTick; }
+    public boolean isMoving()        { return movingUp || movingDown || movingLeft || movingRight; }
 
     public void setMovingUp(boolean v)    { movingUp    = v; }
     public void setMovingDown(boolean v)  { movingDown  = v; }

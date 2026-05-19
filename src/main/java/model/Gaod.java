@@ -6,26 +6,32 @@ package model;
  */
 public class Gaod {
 
-    public static final int SIZE = 24;
+    public static final int SIZE = 40;
+
+    public enum Type { BLUE, RED }
 
     private double x, y;
     private double speed;
     private int    health;
     private boolean alive = true;
+    private Type   type;
+    private int    animationTick = 0;
 
-    public Gaod(double x, double y, double speed, int health) {
+    public Gaod(double x, double y, double speed, int health, Type type) {
         this.x      = x;
         this.y      = y;
         this.speed  = speed;
         this.health = health;
+        this.type   = type;
     }
 
     /**
      * Moves this Gaod toward the nearest living player.
      * Called every frame by the game loop.
      */
-    public void update(java.util.List<Player> players) {
+    public void update(java.util.List<Player> players, java.util.List<Obstacle> obstacles) {
         if (!alive) return;
+        animationTick++;
 
         // Find nearest living player
         Player target = null;
@@ -46,8 +52,24 @@ public class Gaod {
         double dy = (target.getY() + Player.SIZE / 2.0) - (y + SIZE / 2.0);
         double len = Math.sqrt(dx * dx + dy * dy);
         if (len > 0) {
-            x += (dx / len) * speed;
-            y += (dy / len) * speed;
+            double moveX = (dx / len) * speed;
+            double moveY = (dy / len) * speed;
+
+            x += moveX;
+            for (Obstacle o : obstacles) {
+                if (o.isColliding(x, y, SIZE)) {
+                    x -= moveX;
+                    break;
+                }
+            }
+
+            y += moveY;
+            for (Obstacle o : obstacles) {
+                if (o.isColliding(x, y, SIZE)) {
+                    y -= moveY;
+                    break;
+                }
+            }
         }
     }
 
@@ -75,4 +97,6 @@ public class Gaod {
     public boolean isAlive()  { return alive; }
     public double  getSpeed() { return speed; }
     public void    setSpeed(double s) { this.speed = s; }
+    public Type    getType()  { return type; }
+    public int     getAnimationTick() { return animationTick; }
 }

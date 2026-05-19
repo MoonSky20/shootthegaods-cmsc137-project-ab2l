@@ -12,12 +12,15 @@ public class Bullet {
 
     private double  x, y;
     private double  dx, dy;       // normalized direction * speed
+    private double  angle;
     private int     ownerIndex;   // which player fired this
     private boolean active = true;
+    private int     animationTick = 0;
 
     public Bullet(double startX, double startY, double angle, int ownerIndex) {
         this.x          = startX;
         this.y          = startY;
+        this.angle      = angle;
         this.dx         = Math.cos(angle) * SPEED;
         this.dy         = Math.sin(angle) * SPEED;
         this.ownerIndex = ownerIndex;
@@ -29,6 +32,7 @@ public class Bullet {
      */
     public void update(int mapWidth, int mapHeight) {
         if (!active) return;
+        animationTick++;
         x += dx;
         y += dy;
         if (x < 0 || x > mapWidth || y < 0 || y > mapHeight) {
@@ -47,4 +51,6 @@ public class Bullet {
     public double  getX()         { return x; }
     public double  getY()         { return y; }
     public int     getOwnerIndex(){ return ownerIndex; }
+    public double  getAngle()     { return angle; }
+    public int     getAnimationTick() { return animationTick; }
 }
